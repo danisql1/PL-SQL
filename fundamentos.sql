@@ -69,6 +69,28 @@ undefine dept;
 select * from emp;
 --------------------------------------------------
 
+-- Bloque para insertar un departamento
+
+DECLARE
+    v_numero dept.dept_no%type;
+    v_nombre dept.dnombre%type;
+    v_localidad dept.loc%type;
+BEGIN
+    v_numero := &numero;
+    v_nombre := '&nombre';
+    v_localidad := '&localidad';
+    insert into dept values (v_numero, v_nombre, v_localidad);
+END;    
+undefine numero;
+undefine nombre;
+undefine localidad;
+
+select * from dept;
+
+--------------------------------------------------
+
+
+
 
 
 
