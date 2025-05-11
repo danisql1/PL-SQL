@@ -1,0 +1,362 @@
+DROP TABLE CLIENTES CASCADE CONSTRAINTS;
+DROP TABLE DISTRIBUIDORAS CASCADE CONSTRAINTS;
+DROP TABLE GENEROS CASCADE CONSTRAINTS;
+DROP TABLE NACIONALIDAD CASCADE CONSTRAINTS;
+DROP TABLE PEDIDOS CASCADE CONSTRAINTS;
+DROP TABLE PELICULAS CASCADE CONSTRAINTS;
+
+  CREATE TABLE CLIENTES
+   (  IDCLIENTE NUMBER(11,0) NOT NULL, 
+  NOMBRE VARCHAR2(50), 
+  DIRECCION VARCHAR2(50), 
+  EMAIL VARCHAR2(50 CHAR), 
+  CPOSTAL NUMBER(11,0), 
+  PAGINAWEB VARCHAR2(50 CHAR), 
+  IMAGEN_CLIENTE VARCHAR2(50)
+   );
+
+  CREATE TABLE DISTRIBUIDORAS
+   (  IDDISTRIBUIDOR NUMBER(11,0) NOT NULL, 
+  DISTRIBUIDOR VARCHAR2(50), 
+  DIRECCION VARCHAR2(50), 
+  EMAIL VARCHAR2(50), 
+  PAGINAWEB VARCHAR2(50), 
+  TELEFONO NUMBER(11,0), 
+  CONTACTO VARCHAR2(50), 
+  LOGO VARCHAR2(50)
+   );
+ 
+  CREATE TABLE GENEROS 
+   (  IDGENERO NUMBER(11,0) NOT NULL, 
+  GENERO VARCHAR2(50)
+   );
+
+  CREATE TABLE NACIONALIDAD
+   (  IDNACIONALIDAD NUMBER(11,0) NOT NULL, 
+  NACIONALIDAD VARCHAR2(50), 
+  BANDERA VARCHAR2(50));
+
+  CREATE TABLE PEDIDOS
+   (  IDCLIENTE NUMBER(11,0), 
+  IDPELICULA NUMBER(11,0), 
+  CANTIDAD NUMBER(11,0) DEFAULT 0, 
+  FECHA DATE, 
+  PRECIO NUMBER(11,0) DEFAULT 0);
+
+  CREATE TABLE PELICULAS
+   (  IDPELICULA NUMBER(11,0) NOT NULL, 
+  IDDISTRIBUIDOR NUMBER(11,0), 
+  IDGENERO NUMBER(11,0), 
+  TITULO VARCHAR2(255), 
+  IDNACIONALIDAD NUMBER(11,0) DEFAULT 0, 
+  ARGUMENTO CLOB, 
+  FOTO VARCHAR2(50), 
+  FECHA_ESTRENO DATE, 
+  ACTORES CLOB, 
+  DIRECTOR VARCHAR2(50), 
+  DURACION NUMBER(11,0) DEFAULT 0, 
+  PRECIO NUMBER(5,0) DEFAULT 0);
+
+------------------------------------------------
+ 
+ALTER TABLE PELICULAS 
+ADD CONSTRAINT PK_PELICULAS
+PRIMARY KEY (IDPELICULA);
+
+ALTER TABLE PEDIDOS
+ADD CONSTRAINT PK_PEDIDOS
+PRIMARY KEY (IDCLIENTE, IDPELICULA);
+
+ALTER TABLE NACIONALIDAD
+ADD CONSTRAINT PK_NACIONALIDAD
+PRIMARY KEY (IDNACIONALIDAD);
+
+ALTER TABLE GENEROS
+ADD CONSTRAINT PK_GENEROS
+PRIMARY KEY (IDGENERO);
+
+ALTER TABLE DISTRIBUIDORAS
+ADD CONSTRAINT PK_DISTRIBUIDORAS
+PRIMARY KEY (IDDISTRIBUIDOR);
+
+ALTER TABLE CLIENTES
+ADD CONSTRAINT PK_CLIENTES
+PRIMARY KEY (IDCLIENTE);
+
+commit;
+
+------------------------------------------------
+
+alter table peliculas
+add constraint fk_peliculas_distribuidoras
+foreign key (iddistribuidor)
+references distribuidoras (iddistribuidor);
+
+alter table peliculas
+add constraint fk_peliculas_generos
+foreign key (idgenero)
+references géneros (idgenero);
+
+alter table peliculas
+add constraint fk_peliculas_nacionalidad
+foreign key (idnacionalidad)
+references nacionalidad (idnacionalidad);
+
+alter table pedidos
+add constraint fk_pedidos_clientes
+foreign key (idcliente)
+references clientes (idcliente);
+alter table pedidos
+add constraint fk_pedidos_peliculas
+foreign key (idpelicula)
+references peliculas (idpelicula);
+
+------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE insertar_cliente 
+(p_idcliente CLIENTES.IDCLIENTE%TYPE,p_nombre CLIENTES.NOMBRE%TYPE,
+    p_direccion CLIENTES.DIRECCION%TYPE, p_email CLIENTES.EMAIL%TYPE,
+    p_cpostal CLIENTES.CPOSTAL%TYPE, p_paginaweb CLIENTES.PAGINAWEB%TYPE,
+    p_imagen_cliente CLIENTES.IMAGEN_CLIENTE%TYPE
+)
+AS
+BEGIN
+    INSERT INTO CLIENTES VALUES (p_idcliente, p_nombre, p_direccion, p_email, p_cpostal, p_paginaweb, p_imagen_cliente);
+    
+    COMMIT;
+END insertar_cliente;
+
+------------------------------------------------
+
+create or replace procedure precio_pelicula 
+(p_idpelicula peliculas.idpelicula%type)
+AS
+    v_precio peliculas.precio%type;
+BEGIN
+    select precio into v_precio from peliculas where idpelicula =  p_idpelicula;
+    dbms_output.put_line('El precio es de: ' || v_precio || ' €');
+end;
+-- llamada
+BEGIN
+    precio_pelicula(101);
+end;
+
+------------------------------------------------
+
+create or replace procedure modificar_cliente
+(p_idcliente clientes.idcliente%type, p_email clientes.email%type, p_direccion clientes.direccion%type)
+AS
+begin
+    update clientes
+    set email = p_email, direccion = p_direccion where idcliente = p_idcliente;
+    COMMIT;
+end;
+-- llamada al procedimiento
+begin
+    modificar_cliente(1,'nuevo mail','nueva direccion');
+end;    
+
+------------------------------------------------
+
+create or replace function numero_distribuidor
+(p_nombre distribuidoras.distribuidor%type)
+return number
+AS
+    v_telefono distribuidoras.telefono%type;
+begin
+    select telefono into v_telefono from distribuidoras where upper(distribuidor) = upper(p_nombre);
+    return v_telefono;
+end;
+--llamada
+select numero_distribuidor('20th century fox') as NUMERO from dual; 
+
+------------------------------------------------
+
+create or replace function titulo_pelicula
+(p_titulo peliculas.titulo%type)
+return number
+as
+    v_duracion peliculas.duracion%type;
+begin
+    select duracion into v_duracion from peliculas where titulo = p_titulo;
+    return v_duracion;
+end;
+-- llamada
+select titulo_pelicula('Titanic') as PELICULA from dual;
+
+------------------------------------------------
+
+create or replace procedure importe_total_pedidos
+(p_idcliente clientes.idcliente%type, p_total out number)
+as
+begin
+    select sum(precio) into p_total from pedidos where idcliente = p_idcliente;
+end;
+-- llamada
+declare
+    v_total number;
+begin
+    importe_total_pedidos(100, v_total);
+    dbms_output.put_line('El total de pedidos es de ' || v_total || ' €');
+end;
+
+------------------------------------------------
+
+create or replace procedure nacionalidad_bandera
+(p_idnacionalidad nacionalidad.idnacionalidad%type)
+as  
+    v_nacionalidad nacionalidad.nacionalidad%type;
+    v_bandera nacionalidad.bandera%type;
+begin
+    select nacionalidad, bandera into v_nacionalidad, v_bandera from nacionalidad where idnacionalidad = p_idnacionalidad;
+    dbms_output.put_line(v_nacionalidad || ' ' || v_bandera);
+end;
+--llamada
+begin
+    nacionalidad_bandera(1);
+end;    
+
+------------------------------------------------
+
+create or replace procedure registro_pelicula
+(p_idpelicula peliculas.idpelicula%type)
+as
+    type pelicula_info is record (titulo peliculas.titulo%type, duracion peliculas.duracion%type, precio peliculas.precio%type);
+    v_info pelicula_info;
+begin
+    select titulo, duracion, precio into v_info.titulo, v_info.duracion, v_info.precio from peliculas where idpelicula = p_idpelicula;
+    dbms_output.put_line('Título: ' || v_info.titulo || ', Duración: ' || v_info.duracion || ' minutos, Precio: ' || v_info.precio || '€');    
+end;
+--llamada
+begin
+    registro_pelicula(5);
+end;    
+
+------------------------------------------------
+
+create or replace procedure datos_cliente
+(p_idcliente clientes.idcliente%type)
+as
+    v_nombre clientes.nombre%type;
+    v_dir clientes.direccion%type;
+    v_email clientes.email%type;
+    v_cp clientes.cpostal%type;
+    v_web clientes.paginaweb%type;
+    v_imagen clientes.imagen_cliente%type;
+begin
+    select nombre, direccion, email, cpostal, paginaweb, imagen_cliente
+    into v_nombre, v_dir, v_email, v_cp, v_web, v_imagen from clientes
+    where idcliente = p_idcliente;
+    dbms_output.put_line('ID: ' || p_idcliente || ', Nombre: ' || v_nombre || ', Dirección: ' || v_dir || ', Email: ' || v_email || ', Código Postal: ' || v_cp || ', Web:' || v_web || ', Imagen: ' || v_imagen);
+exception
+    when no_data_found then
+        dbms_output.put_line('El cliente con ID ' || p_idcliente || ' no existe');
+end;
+--llamada
+begin
+    datos_cliente(5);
+end;
+
+------------------------------------------------
+
+create or replace procedure precio_pelicula_entrada_salida
+(p_idpelicula peliculas.idpelicula%type, p_precio OUT peliculas.precio%type)
+as
+begin
+    select precio into p_precio from peliculas where idpelicula = p_idpelicula;
+end;
+-- llamada
+declare
+   v_precio peliculas.precio%type;
+begin
+    precio_pelicula_entrada_salida(1, v_precio);
+    dbms_output.put_line('El precio de la película es ' || v_precio || '€');        
+end;
+
+------------------------------------------------
+
+create or replace procedure registro_distribuidor
+(p_iddistribuidor distribuidoras.iddistribuidor%type)
+as
+    type distribuidor_info is record (email distribuidoras.email%type, telefono distribuidoras.telefono%type, web distribuidoras.paginaweb%type);
+    v_info distribuidor_info;
+begin
+    select email, telefono, web into v_info.email, v_info.telefono, v_info.web from distribuidoras where iddistribuidor = p_iddistribuidor;
+    dbms_output.put_line('Email: ' || v_info.email || ', Teléfono: ' || v_info.telefono || ',Web: ' || v_info.web);     
+end;
+--llamada
+begin
+    registro_distribuidor(4);
+end;    
+
+------------------------------------------------
+
+declare
+    cursor GeneroPeliculas is 
+    select idpelicula from peliculas join generos on peliculas.idgenero=generos.idgenero where upper(generos.genero)='ACCION';  
+    type varray_accion is varray(10) of peliculas.idpelicula%type;
+    lista_peliculas varray_accion := varray_accion();
+    contador int  := 0;
+begin
+    for n in GeneroPeliculas loop
+        contador := contador +1;
+        lista_peliculas.extend;
+        lista_peliculas(contador) := n.idpelicula;
+        dbms_output.put_line('Película de acción('||contador||'):'||lista_peliculas(contador));
+    end loop;        
+end;
+
+------------------------------------------------
+
+declare
+    type tabla_numeros_pares is table of number;
+    v_numeros_pares tabla_numeros_pares := tabla_numeros_pares();
+begin
+    for i in 2..200 loop
+        if mod(i,2) = 0 then
+            v_numeros_pares.extend;
+            v_numeros_pares(v_numeros_pares.count) := i;
+        end if;
+    end loop;
+    for i in 1..v_numeros_pares.count loop
+        dbms_output.put_line('Número ' || v_numeros_pares(i));
+    end loop;        
+end;
+
+------------------------------------------------
+
+create or replace procedure obtener_genero
+(p_idgenero generos.idgenero%type)
+as
+begin
+    for v_genero in (select * from generos where idgenero =  p_idgenero) loop
+    dbms_output.put_line('ID: ' || v_genero.idgenero || ', Género: '  || v_genero.genero);
+    end loop;
+end;
+--llamada
+begin
+    obtener_genero(1);
+end;
+
+------------------------------------------------
+
+create or replace procedure nombre_distribuidor
+(p_iddistribuidor distribuidoras.iddistribuidor%type)
+as
+    v_nombre distribuidoras.nombre%type;
+    v_abreviatura varchar2(4);
+begin
+    select nombre into v_nombre from DISTRIBUIDORAS where iddistribuidor = p_iddistribuidor;
+    v_abreviatura := CASE v_nombre
+        when 'SONY PICTURES' then 'SP'
+        when 'BUENA VISTA INTERNACIONAL' then 'BVI'
+        when 'LAUREN FILMS' then 'LF'
+        when 'WARNER BROTHERS' then 'WB'
+        when 'TRIPICTURES' then 'TP'
+    end case;
+    dbms_output.put_line(v_abreviatura);    
+end;
+--llamada
+begin
+    nombre_distribuidor(1);
+end;
